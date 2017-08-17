@@ -1,4 +1,4 @@
-Analysis Soft for SI/CdTe strip detectors
+Analysis Soft for Si/CdTe strip detectors
 -----
 ###### v1.0.0 by Hiroki Yoneda -- 2017 08 17
 --------
