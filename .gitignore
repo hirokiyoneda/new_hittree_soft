@@ -1,0 +1,4 @@
+build
+document/*.aux
+document/*.log
+document/*.synctex.gz

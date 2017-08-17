@@ -1,0 +1,143 @@
+\documentclass[10.5pt]{jsarticle} 
+\usepackage{graphicx}
+\def\vector#1{\mbox{\boldmath $#1$}} 
+\setlength{\columnsep}{3zw}
+\setlength{\columnseprule}{0.4pt}
+\title{new hittree soft Docment} 
+\author{Hiroki Yoneda} 
+\date{\today}
+%%%%%%    TEXT START    %%%%%% 
+\begin{document} 
+\maketitle 
+
+これまでのhittreeでは、一挙に行われていたmergeやreconstructなどを分解して解析することや、
+それらのアルゴリズムをより柔軟に実装できるのを目標として、
+"new hittree soft"を作成中である。
+このDocumentでは、databaseや生成ファイルについて、説明する。
+
+\section{Databese}
+検出器に与えるデータベースは、detector\_map、detector\_profile, cal関数の3種類必要である。
+\subsection{detector\_map}
+ASICID, ASICCHとDETID, DETCHとの対応付をするデータである。
+"detector\_map"というTTree形式で与えられる。
+以下のようなBranchを持っている。
+\begin{table}[htb]
+  \begin{tabular}{|c|c|c|} \hline
+  Branch名 & 型 & 説明 \\ \hline
+  asicid & Int\_t & \\
+  asicch & Int\_t & 使用していないchであっても記述する必要あり\\
+  remapch & Int\_t & 検出器全体でのchに対する通し番号。使用していないchは、"-1"を記入。\\
+  detid & Int\_t  & 検出器のID。Siを0-9に、CdTeを10以上にすることを推奨。\\
+  detch & Int\_t &  検出器内でのCh。 隣接Chは、detchも隣接する。使用していないchは、"-1"を記入。\\ \hline
+  \end{tabular}
+\end{table}
+また、asicは、64ch持っていることを前提している。
+
+\subsection{detector\_profile}
+検出器は、xy面に平行であり、各ストリップは、x軸、または、y軸に平行であることを前提としている。
+検出器が3次元的に複雑に配置される場合は、hittree\_lv3から変換する必要あり。
+\begin{table}[htb]
+  \begin{tabular}{|c|c|c|} \hline
+  Branch名 & 型 & 説明 \\ \hline
+  detid & Int\_t  & 検出器のID。Siを0-9に、CdTeを10以上にすることを推奨。\\
+  detch & Int\_t &  使用していないchは、ここでは記入する必要なし。\\
+  detector\_material & Int\_t & 0: Si、1:CdTe\\
+  detector\_HV & Int\_t & 0: Ground 1: HVside\\
+  pos\_x  & Double\_t & 位置情報を持たない場合は、適当な値(0など)を入れる。\\
+   pos\_y  & Double\_t & 位置情報を持たない場合は、適当な値(0など)を入れる。\\
+   pos\_z  & Double\_t & \\
+   delta\_x  & Double\_t & 位置情報を持たない場合は、"-1"を入れる。負値から、ストリップ方向を認識する。\\
+   delta\_y  & Double\_t & 位置情報を持たない場合は、"-1"を入れる。負値から、ストリップ方向を認識する。\\
+   delta\_z  & Double\_t & \\
+   badch & Int\_t & 0: Good Channel 1: Bad Channel \\
+   \hline
+  \end{tabular}
+\end{table}
+
+\subsection{cal関数}
+"calfunc\_DETID\_DETCH"という名前のTSpline3を持っているroot fileで与えられる。
+
+\section{生成ファイル}
+データの生成は、
+eventtree $\to$
+hitttree\_lv1 $\to$
+hitttree\_lv2 $\to$
+hitttree\_lv3
+の3段階に分かれて行う。
+
+hitttree\_lv1 は、データベースの適用を行うのみとする。
+hitttree\_lv2 は、ストリップのマージを基本的には行う。
+hitttree\_lv3 は、マージされたストリップシグナルを元に、ヒットを再構成する。
+各段階で、新しいBranchが元のtreeに追加されていく形を採用する。
+したがって、hittree\_lv3は、eventtree, hitttree\_lv1, hitttree\_lv2の情報も保持している。
+
+\subsection{hitttree\_lv1}
+エネルギースレッショルドは適用せず、データベースを当てるのみ。
+各ブランチは、データベースの値をコピーした値になっている。
+1番目以外は、全て可変長配列。
+\begin{table}[htb]
+  \begin{tabular}{|c|c|c|} \hline
+  Branch名 & 型 & 説明 \\ \hline
+ nsignal\_lv1 &  Int\_t & シグナル数\\ 
+detid\_lv1[nsignal\_lv1] &  Int\_t & \\ 
+detch\_lv1[nsignal\_lv1] &   Int\_t & \\ 
+remapch\_lv1[nsignal\_lv1] &  Int\_t & \\ 
+detector\_material\_lv1[nsignal\_lv1] & Int\_t & \\ 
+detector\_HV\_lv1[nsignal\_lv1]  & Int\_t & \\
+epi\_lv1[nsignal\_lv1]    & Double\_t & \\     
+pos\_x\_lv1[nsignal\_lv1]   & Double\_t & \\ 
+pos\_y\_lv1[nsignal\_lv1]   & Double\_t & \\ \
+pos\_z\_lv1[nsignal\_lv1]   & Double\_t & \\ 
+delta\_x\_lv1[nsignal\_lv1] & Double\_t & \\ 
+delta\_y\_lv1[nsignal\_lv1]  & Double\_t & \\ 
+delta\_z\_lv1[nsignal\_lv1]  & Double\_t & \\ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{hitttree\_lv2}
+マージアルゴリズムを適用した後のシグナル情報。
+posやdeltaは、マージアルゴリズム内で計算する必要あり。
+\begin{table}[htb]
+  \begin{tabular}{|c|c|c|} \hline
+  Branch名 & 型 & 説明 \\ \hline
+nsignal\_lv2 & Int\_t & \\
+detid\_lv2[nsignal\_lv2] & Int\_t & \\
+detector\_material\_lv2[nsignal\_lv2] & Int\_t & \\
+detector\_HV\_lv2[nsignal\_lv2] & Int\_t & \\
+n\_merged\_signal\_lv2[nsignal\_lv2] & Int\_t & 各シグナルにおいて、マージに使用した元のシグナル数\\
+pos\_x\_lv2[nsignal\_lv2] & Double\_t & \\
+pos\_y\_lv2[nsignal\_lv2] & Double\_t & \\
+pos\_z\_lv2[nsignal\_lv2] & Double\_t & \\
+delta\_x\_lv2[nsignal\_lv2] & Double\_t & \\
+delta\_y\_lv2[nsignal\_lv2] & Double\_t & \\
+delta\_z\_lv2[nsignal\_lv2] & Double\_t & \\
+epi\_lv2[nsignal\_lv2] & Double\_t & \\
+ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{hitttree\_lv3}
+両面情報からヒット情報に変換した後のデータ。
+posやdeltaは、再構成アルゴリズム内で計算する必要あり。
+
+\begin{table}[htb]
+\begin{tabular}{|c|c|c|} \hline
+Branch名 & 型 & 説明 \\ \hline
+nhit & Int\_t & reconstuct後のヒット数\\
+detid\_lv3[nhit] & Int\_t & \\
+detector\_material\_lv3[nhit] & Int\_t & \\
+pos\_x\_lv3[nhit] & Double\_t & \\
+pos\_y\_lv3[nhit] & Double\_t & \\
+pos\_z\_lv3[nhit] & Double\_t & \\
+delta\_x\_lv3[nhit] & Double\_t & \\
+delta\_y\_lv3[nhit] & Double\_t & \\
+delta\_z\_lv3[nhit] & Double\_t & \\
+epi\_lv3[nhit] & Double\_t & \\ \hline
+  \end{tabular}
+\end{table}
+
+\section{その他}
+asicの最大数は、100としている。
+
+
+\end{document}
